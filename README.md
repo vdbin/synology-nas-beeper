@@ -118,7 +118,7 @@ and `<upsd_pwd>` with the desired values):
     [<upsd_username>]
         password = <upsd_pwd>
         actions = SET
-        instcmds = beeper.enable beeper.disable ups.beeper.status
+        instcmds = beeper.enable beeper.disable beeper.toggle ups.beeper.status
 ```
 
 ### 4. Restart the upsd service

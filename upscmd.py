@@ -2,6 +2,7 @@
 import sys
 import telnetlib
 import time
+import subprocess
 
 user = "<the upsd_username set in upsd.users>"
 pwd = "<the upsd_pwd set in upsd.users>"
@@ -42,10 +43,34 @@ print("INSTCMD ups {0}: {1}".format(cmd, response.strip()))
 if response.strip() != "OK":
   tn.write("LIST CMD ups\n")
   response = tn.read_until("END LIST CMD ups", timeout=2)
-  print("\n>> AVAILABLE CMDS:")
-  cmds = response.splitlines()[1:-1]
-  for cmd in cmds:
-    print(cmd.replace("CMD ups ", "- "))
+
+  if cmd in ["beeper.enable", "beeper.disable"] and "beeper.toggle" in response:
+      print("\n-- Command failed, checking beeper.toggle capability...")
+      try:
+          current_status = subprocess.check_output(["upsc", "ups", "ups.beeper.status"]).strip()
+          print("Current ups.beeper.status: " + current_status)
+
+          should_toggle = False
+          if cmd == "beeper.enable" and current_status == "disabled":
+              should_toggle = True
+          elif cmd == "beeper.disable" and current_status == "enabled":
+              should_toggle = True
+
+          if should_toggle:
+              print("Status mismatch. Executing beeper.toggle...")
+              tn.write("INSTCMD ups beeper.toggle\n")
+              toggle_resp = tn.read_until("OK", timeout=2)
+              print("INSTCMD ups beeper.toggle: {0}".format(toggle_resp.strip()))
+          else:
+              print("Beeper is already in the desired state (" + current_status + "). No action needed.")
+
+      except Exception as e:
+          print("Error checking status or toggling: " + str(e))
+  else:
+      print("\n-- AVAILABLE CMDS:")
+      cmds = response.splitlines()[1:-1]
+      for cmd in cmds:
+        print(cmd.replace("CMD ups ", "- "))
 
 tn.write("LOGOUT\n")
 print tn.read_all().rstrip("\n")
